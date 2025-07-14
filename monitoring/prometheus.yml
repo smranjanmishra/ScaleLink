@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: 'prometheus'
+
+    # metrics_path defaults to '/metrics'
+    # scheme defaults to 'http'.
+
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # LinkSprint application metrics
+  - job_name: 'linksprint'
+    static_configs:
+      - targets: ['app:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Redis metrics (if using Redis exporter)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # CockroachDB metrics (if using CockroachDB exporter)
+  - job_name: 'cockroachdb'
+    static_configs:
+      - targets: ['cockroachdb:8080']
+    metrics_path: '/_status/vars'
+    scrape_interval: 30s 

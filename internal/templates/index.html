@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkSprint - URL Shortener</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 500px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        input[type="url"], input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="url"]:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .short-url {
+            color: #667eea;
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        .error {
+            color: #dc3545;
+            margin-top: 0.5rem;
+            font-size: 14px;
+        }
+
+        .stats {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stats h3 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .stat-value {
+            font-weight: 600;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 LinkSprint</h1>
+            <p>Distributed URL Shortener & Analytics</p>
+        </div>
+
+        <form id="shortenForm">
+            <div class="form-group">
+                <label for="originalUrl">Original URL</label>
+                <input type="url" id="originalUrl" name="originalUrl" placeholder="https://example.com" required>
+            </div>
+
+            <div class="form-group">
+                <label for="customCode">Custom Code (optional)</label>
+                <input type="text" id="customCode" name="customCode" placeholder="my-custom-link">
+            </div>
+
+            <button type="submit">Shorten URL</button>
+        </form>
+
+        <div class="result" id="result">
+            <h3>Your Shortened URL</h3>
+            <div class="short-url" id="shortUrl"></div>
+            <button onclick="copyToClipboard()" style="margin-top: 1rem; width: auto; padding: 8px 16px;">Copy URL</button>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <h3>📊 Global Statistics</h3>
+            <div class="stat-item">
+                <span class="stat-label">Total URLs:</span>
+                <span class="stat-value" id="totalUrls">-</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Total Clicks:</span>
+                <span class="stat-value" id="totalClicks">-</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Today's Clicks:</span>
+                <span class="stat-value" id="todayClicks">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('shortenForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalUrl = document.getElementById('originalUrl').value;
+            const customCode = document.getElementById('customCode').value;
+            
+            try {
+                const response = await fetch('/api/v1/urls/shorten', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        original_url: originalUrl,
+                        custom_code: customCode || undefined
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('shortUrl').textContent = data.short_url;
+                    document.getElementById('result').classList.add('show');
+                    loadStats();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/v1/analytics/global');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('totalUrls').textContent = data.total_urls;
+                    document.getElementById('totalClicks').textContent = data.total_clicks;
+                    document.getElementById('todayClicks').textContent = data.today_clicks;
+                    document.getElementById('stats').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Failed to load stats:', error);
+            }
+        }
+
+        function copyToClipboard() {
+            const shortUrl = document.getElementById('shortUrl').textContent;
+            navigator.clipboard.writeText(shortUrl).then(() => {
+                alert('URL copied to clipboard!');
+            }).catch(() => {
+                alert('Failed to copy URL');
+            });
+        }
+
+        // Load stats on page load
+        loadStats();
+    </script>
+</body>
+</html> 
